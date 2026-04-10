@@ -89,6 +89,9 @@ dependencies {
     implementation(libs.retrofit.moshi)
     implementation(libs.moshi.kotlin)
 
+    // Google Play Services Location
+    implementation(libs.play.services.location)
+
     // Test dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

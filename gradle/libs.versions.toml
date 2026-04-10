@@ -16,6 +16,7 @@ moshi = "1.15.1"
 okhttpBom = "4.12.0"
 ferrostar = "0.48.1"
 androidDesugar = "2.1.5"
+playServicesLocation = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +55,9 @@ ferrostar-maplibreui = { group = "com.stadiamaps.ferrostar", name = "maplibreui"
 
 # Desugar
 android-desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "androidDesugar" }
+
+# Google Play Services Location
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
