@@ -1,5 +1,7 @@
 package com.domakingo.thelongway.features.map.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,11 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -32,81 +33,162 @@ fun MapSearchBar(
     onSearch: (String) -> Unit,
     onSuggestionClick: (GeocodingFeature) -> Unit,
     onClearClick: () -> Unit,
+    isRoutingMode: Boolean,
+    originQuery: String,
+    destinationQuery: String,
+    onOriginQueryChange: (String) -> Unit,
+    onDestinationQueryChange: (String) -> Unit,
+    onToggleRouting: () -> Unit,
+    onUseCurrentLocation: () -> Unit,
+    onCalculateRoute: () -> Unit,
+    isSelected: Boolean,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
 
-    Column(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp)
+            .animateContentSize(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(stringResource(R.string.search_placeholder)) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
+        Column {
+            if (!isRoutingMode) {
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.search_placeholder)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isSelected) {
+                                IconButton(onClick = onToggleRouting) {
+                                    Icon(
+                                        imageVector = Icons.Default.Directions,
+                                        contentDescription = "Directions",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = onClearClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = stringResource(R.string.clear_search_desc)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        onSearch(query)
+                        focusManager.clearFocus()
+                    })
                 )
-            },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(
-                        onClick = onClearClick
+            } else {
+                // Routing Mode UI
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.clear_search_desc)
+                        Text(
+                            "Route",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(onClick = onToggleRouting) {
+                            Icon(Icons.Default.Close, contentDescription = "Close Routing")
+                        }
+                    }
+
+                    TextField(
+                        value = originQuery,
+                        onValueChange = onOriginQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Start position") },
+                        leadingIcon = { Icon(Icons.Default.MyLocation, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = onUseCurrentLocation) {
+                                Icon(Icons.Default.GpsFixed, contentDescription = "Use Current Location")
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextField(
+                        value = destinationQuery,
+                        onValueChange = onDestinationQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Destination") },
+                        leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            onCalculateRoute()
+                            focusManager.clearFocus()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = originQuery.isNotEmpty() && destinationQuery.isNotEmpty()
+                    ) {
+                        Text("Calculate Route")
                     }
                 }
-            },
-            shape = if (suggestions.isEmpty()) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Search
-            ),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    onSearch(query)
-                    focusManager.clearFocus()
-                }
-            )
-        )
+            }
 
-        if (suggestions.isNotEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 250.dp)
-                ) {
-                    items(suggestions) { feature ->
-                        SuggestionItem(
-                            feature = feature,
-                            onClick = {
-                                onSuggestionClick(feature)
-                                focusManager.clearFocus()
-                            }
-                        )
-                        if (feature != suggestions.last()) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant
+            AnimatedVisibility(visible = suggestions.isNotEmpty()) {
+                Column {
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
+                        items(suggestions) { feature ->
+                            SuggestionItem(
+                                feature = feature,
+                                onClick = {
+                                    onSuggestionClick(feature)
+                                    focusManager.clearFocus()
+                                }
                             )
                         }
                     }
@@ -126,7 +208,7 @@ private fun SuggestionItem(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(16.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Default.LocationOn,

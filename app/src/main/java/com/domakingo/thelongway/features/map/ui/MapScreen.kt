@@ -71,6 +71,10 @@ private fun MapContent(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val suggestions by viewModel.suggestions.collectAsState()
     val selectedLocation by viewModel.selectedLocation.collectAsState()
+    
+    val isRoutingMode by viewModel.isRoutingMode.collectAsState()
+    val originQuery by viewModel.originQuery.collectAsState()
+    val destinationQuery by viewModel.destinationQuery.collectAsState()
 
     val mapView = remember { MapView(context) }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -169,6 +173,15 @@ private fun MapContent(
             onSearch = viewModel::onSearch,
             onSuggestionClick = viewModel::onSuggestionSelected,
             onClearClick = viewModel::clearSearch,
+            isRoutingMode = isRoutingMode,
+            originQuery = originQuery,
+            destinationQuery = destinationQuery,
+            onOriginQueryChange = viewModel::onOriginQueryChange,
+            onDestinationQueryChange = viewModel::onDestinationQueryChange,
+            onToggleRouting = viewModel::toggleRoutingMode,
+            onUseCurrentLocation = viewModel::setOriginToCurrentLocation,
+            onCalculateRoute = viewModel::calculateRoute,
+            isSelected = selectedLocation != null,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()

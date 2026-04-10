@@ -46,6 +46,7 @@ class MapViewModel(
     private val _isLocationPermissionGranted = MutableStateFlow(false)
     val isLocationPermissionGranted: StateFlow<Boolean> = _isLocationPermissionGranted.asStateFlow()
 
+    // Search state
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -57,6 +58,22 @@ class MapViewModel(
 
     private val _searchResults = MutableSharedFlow<LatLng>()
     val searchResults: SharedFlow<LatLng> = _searchResults.asSharedFlow()
+
+    // Routing state
+    private val _isRoutingMode = MutableStateFlow(false)
+    val isRoutingMode: StateFlow<Boolean> = _isRoutingMode.asStateFlow()
+
+    private val _originQuery = MutableStateFlow("")
+    val originQuery: StateFlow<String> = _originQuery.asStateFlow()
+
+    private val _destinationQuery = MutableStateFlow("")
+    val destinationQuery: StateFlow<String> = _destinationQuery.asStateFlow()
+
+    private val _originLocation = MutableStateFlow<LatLng?>(null)
+    val originLocation: StateFlow<LatLng?> = _originLocation.asStateFlow()
+
+    private val _destinationLocation = MutableStateFlow<LatLng?>(null)
+    val destinationLocation: StateFlow<LatLng?> = _destinationLocation.asStateFlow()
 
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
     private var isCurrentDark: Boolean? = null
@@ -86,7 +103,20 @@ class MapViewModel(
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
-        
+        handleAutocomplete(query)
+    }
+
+    fun onOriginQueryChange(query: String) {
+        _originQuery.value = query
+        handleAutocomplete(query)
+    }
+
+    fun onDestinationQueryChange(query: String) {
+        _destinationQuery.value = query
+        handleAutocomplete(query)
+    }
+
+    private fun handleAutocomplete(query: String) {
         autocompleteJob?.cancel()
         if (query.length < 3) {
             _suggestions.value = emptyList()
@@ -133,9 +163,29 @@ class MapViewModel(
     }
 
     fun onSuggestionSelected(feature: GeocodingFeature) {
-        _searchQuery.value = feature.properties.label
+        val label = feature.properties.label
+        val coords = feature.geometry.coordinates
+        val latLng = LatLng(coords[1], coords[0])
+
+        if (_isRoutingMode.value) {
+            // Determine which field is being edited. 
+            // Simplified: if destinationQuery matches label, it was destination, else origin if it's being typed.
+            // For now, let's assume we need to know which one was focused. 
+            // To keep it simple, if destination is empty or we just started routing, set destination.
+            if (_destinationQuery.value.isEmpty() || _selectedLocation.value == latLng) {
+                _destinationQuery.value = label
+                _destinationLocation.value = latLng
+            } else {
+                _originQuery.value = label
+                _originLocation.value = latLng
+            }
+        } else {
+            _searchQuery.value = label
+            _destinationQuery.value = label
+            _destinationLocation.value = latLng
+            selectFeature(feature)
+        }
         _suggestions.value = emptyList()
-        selectFeature(feature)
     }
 
     private fun selectFeature(feature: GeocodingFeature) {
@@ -147,10 +197,39 @@ class MapViewModel(
         }
     }
 
+    fun toggleRoutingMode() {
+        _isRoutingMode.value = !_isRoutingMode.value
+        if (_isRoutingMode.value) {
+            _destinationQuery.value = _searchQuery.value
+            _destinationLocation.value = _selectedLocation.value
+        }
+    }
+
+    fun setOriginToCurrentLocation() {
+        _userLocation.value?.let { location ->
+            _originQuery.value = "Current Location"
+            _originLocation.value = LatLng(location.latitude, location.longitude)
+        }
+    }
+
     fun clearSearch() {
         _searchQuery.value = ""
         _suggestions.value = emptyList()
         _selectedLocation.value = null
+        _isRoutingMode.value = false
+        _originQuery.value = ""
+        _destinationQuery.value = ""
+        _originLocation.value = null
+        _destinationLocation.value = null
+    }
+
+    fun calculateRoute() {
+        val origin = _originLocation.value
+        val destination = _destinationLocation.value
+        if (origin != null && destination != null) {
+            // TODO: Implement actual routing call
+            println("Calculating route from $origin to $destination")
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
