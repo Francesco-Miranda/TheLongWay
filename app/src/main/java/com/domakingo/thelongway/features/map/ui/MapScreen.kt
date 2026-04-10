@@ -13,6 +13,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.domakingo.thelongway.core.ui.permissions.PermissionGate
 import com.domakingo.thelongway.features.map.viewmodel.MapViewModel
 import org.maplibre.android.MapLibre
+import org.maplibre.android.WellKnownTileServer
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
@@ -56,11 +57,13 @@ private fun MapContent(
     val styleUrl by viewModel.styleUrl.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
 
+    remember {
+        MapLibre.getInstance(context, viewModel.apiKey, WellKnownTileServer.MapLibre)
+    }
+
     val mapView = remember { MapView(context) }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
     var isInitialZoomPerformed by remember { mutableStateOf(false) }
-
-    remember { MapLibre.getInstance(context) }
 
     LaunchedEffect(mapView, isPermissionGranted, styleUrl) {
         mapView.getMapAsync { map ->
@@ -73,6 +76,7 @@ private fun MapContent(
         }
     }
 
+    // Move camera to user location only once upon first valid update
     LaunchedEffect(userLocation) {
         val location = userLocation ?: return@LaunchedEffect
         val map = mapInstance ?: return@LaunchedEffect
@@ -81,7 +85,7 @@ private fun MapContent(
             map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     LatLng(location.latitude, location.longitude),
-                    15.0
+                    17.0
                 )
             )
             isInitialZoomPerformed = true
@@ -100,7 +104,9 @@ private fun MapContent(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     AndroidView(
