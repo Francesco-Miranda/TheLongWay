@@ -3,14 +3,20 @@ package com.domakingo.thelongway.features.map.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.domakingo.thelongway.core.ui.permissions.PermissionGate
+import com.domakingo.thelongway.features.map.ui.components.UserLocationButton
 import com.domakingo.thelongway.features.map.viewmodel.MapViewModel
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -103,10 +109,30 @@ private fun MapContent(
         }
     }
 
-    AndroidView(
-        factory = { mapView },
-        modifier = modifier
-    )
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { mapView },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (isPermissionGranted) {
+            UserLocationButton(
+                onClick = {
+                    userLocation?.let { location ->
+                        mapInstance?.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(location.latitude, location.longitude),
+                                17.0
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            )
+        }
+    }
 }
 
 @SuppressLint("MissingPermission")
