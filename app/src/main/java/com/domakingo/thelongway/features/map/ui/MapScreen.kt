@@ -12,8 +12,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.domakingo.thelongway.core.ui.permissions.PermissionGate
 import com.domakingo.thelongway.features.map.viewmodel.MapViewModel
-import org.maplibre.android.MapLibre
-import org.maplibre.android.WellKnownTileServer
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
@@ -56,10 +54,6 @@ private fun MapContent(
     val lifecycleOwner = LocalLifecycleOwner.current
     val styleUrl by viewModel.styleUrl.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
-
-    remember {
-        MapLibre.getInstance(context, viewModel.apiKey, WellKnownTileServer.MapLibre)
-    }
 
     val mapView = remember { MapView(context) }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }

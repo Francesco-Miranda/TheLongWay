@@ -20,7 +20,7 @@ class MapViewModel(
     private val sensorManager: SensorManager,
     private val locationProvider: LocationProvider
 ) : ViewModel(), SensorEventListener {
-    val apiKey = BuildConfig.STADIA_MAPS_API_KEY
+    private val apiKey = BuildConfig.STADIA_MAPS_API_KEY
     
     private val _styleUrl = MutableStateFlow(getStyleUrl(isDark = false))
     val styleUrl: StateFlow<String> = _styleUrl.asStateFlow()
