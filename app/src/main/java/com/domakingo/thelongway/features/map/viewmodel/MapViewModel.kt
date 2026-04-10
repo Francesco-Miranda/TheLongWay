@@ -35,7 +35,7 @@ class MapViewModel(
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-    private var isCurrentDark = false
+    private var isCurrentDark: Boolean? = null
     private var locationJob: Job? = null
 
     init {
@@ -69,6 +69,7 @@ class MapViewModel(
 
     override fun onSensorChanged(event: SensorEvent?) {
         val lux = event?.values?.get(0) ?: return
+
         val isDark = lux < LUX_THRESHOLD
         
         if (isDark != isCurrentDark) {
@@ -91,6 +92,6 @@ class MapViewModel(
     }
 
     companion object {
-        private const val LUX_THRESHOLD = 15.0f
+        private const val LUX_THRESHOLD = 50.0f
     }
 }
