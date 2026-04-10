@@ -13,8 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.domakingo.thelongway.R
 
 @Composable
 fun MapSearchBar(
@@ -31,7 +33,7 @@ fun MapSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp),
-        placeholder = { Text("Search...") },
+        placeholder = { Text(stringResource(R.string.search_placeholder)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
@@ -47,7 +49,7 @@ fun MapSearchBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear search"
+                        contentDescription = stringResource(R.string.clear_search_desc)
                     )
                 }
             }

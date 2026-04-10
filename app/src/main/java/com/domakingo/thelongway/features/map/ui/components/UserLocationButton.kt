@@ -6,6 +6,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.domakingo.thelongway.R
 
 @Composable
 fun UserLocationButton(
@@ -18,7 +20,7 @@ fun UserLocationButton(
     ) {
         Icon(
             imageVector = Icons.Default.MyLocation,
-            contentDescription = "Center on user location"
+            contentDescription = stringResource(R.string.center_on_user_location)
         )
     }
 }
