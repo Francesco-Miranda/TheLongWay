@@ -23,6 +23,8 @@ import com.domakingo.thelongway.core.ui.permissions.PermissionGate
 import com.domakingo.thelongway.features.map.ui.components.MapSearchBar
 import com.domakingo.thelongway.features.map.ui.components.UserLocationButton
 import com.domakingo.thelongway.features.map.viewmodel.MapViewModel
+import org.maplibre.android.annotations.Marker
+import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
@@ -67,10 +69,13 @@ private fun MapContent(
     val styleUrl by viewModel.styleUrl.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
+    val selectedLocation by viewModel.selectedLocation.collectAsState()
 
     val mapView = remember { MapView(context) }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
     var isInitialZoomPerformed by remember { mutableStateOf(false) }
+    var currentMarker by remember { mutableStateOf<Marker?>(null) }
 
     LaunchedEffect(mapView, isPermissionGranted, styleUrl) {
         mapView.getMapAsync { map ->
@@ -100,6 +105,30 @@ private fun MapContent(
                 )
             )
             isInitialZoomPerformed = true
+        }
+    }
+
+    // Observe search results and move camera
+    LaunchedEffect(viewModel.searchResults) {
+        viewModel.searchResults.collect { latLng ->
+            mapInstance?.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(latLng, 15.0)
+            )
+        }
+    }
+
+    // Manage search marker
+    LaunchedEffect(selectedLocation) {
+        val map = mapInstance ?: return@LaunchedEffect
+        
+        // Remove existing marker
+        currentMarker?.let { map.removeMarker(it) }
+        
+        // Add new marker if location is selected
+        selectedLocation?.let { latLng ->
+            currentMarker = map.addMarker(MarkerOptions().position(latLng))
+        } ?: run {
+            currentMarker = null
         }
     }
 
@@ -135,8 +164,11 @@ private fun MapContent(
 
         MapSearchBar(
             query = searchQuery,
+            suggestions = suggestions,
             onQueryChange = viewModel::onSearchQueryChange,
             onSearch = viewModel::onSearch,
+            onSuggestionClick = viewModel::onSuggestionSelected,
+            onClearClick = viewModel::clearSearch,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()

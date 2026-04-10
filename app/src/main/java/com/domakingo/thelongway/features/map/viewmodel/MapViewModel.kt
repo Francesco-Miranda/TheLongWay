@@ -9,12 +9,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.domakingo.thelongway.BuildConfig
 import com.domakingo.thelongway.core.location.LocationProvider
+import com.domakingo.thelongway.core.network.GeocodingFeature
+import com.domakingo.thelongway.core.network.GeocodingService
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import org.maplibre.android.geometry.LatLng
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MapViewModel(
     private val sensorManager: SensorManager,
@@ -22,6 +27,16 @@ class MapViewModel(
 ) : ViewModel(), SensorEventListener {
     private val apiKey = BuildConfig.STADIA_MAPS_API_KEY
     
+    private val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    private val geocodingService = Retrofit.Builder()
+        .baseUrl("https://api.stadiamaps.com/")
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
+        .create(GeocodingService::class.java)
+
     private val _styleUrl = MutableStateFlow(getStyleUrl(isDark = false))
     val styleUrl: StateFlow<String> = _styleUrl.asStateFlow()
 
@@ -34,9 +49,19 @@ class MapViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _suggestions = MutableStateFlow<List<GeocodingFeature>>(emptyList())
+    val suggestions: StateFlow<List<GeocodingFeature>> = _suggestions.asStateFlow()
+
+    private val _selectedLocation = MutableStateFlow<LatLng?>(null)
+    val selectedLocation: StateFlow<LatLng?> = _selectedLocation.asStateFlow()
+
+    private val _searchResults = MutableSharedFlow<LatLng>()
+    val searchResults: SharedFlow<LatLng> = _searchResults.asSharedFlow()
+
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
     private var isCurrentDark: Boolean? = null
     private var locationJob: Job? = null
+    private var autocompleteJob: Job? = null
 
     init {
         lightSensor?.let {
@@ -61,10 +86,71 @@ class MapViewModel(
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
+        
+        autocompleteJob?.cancel()
+        if (query.length < 3) {
+            _suggestions.value = emptyList()
+            return
+        }
+
+        autocompleteJob = viewModelScope.launch {
+            delay(300) // Debounce
+            try {
+                val focus = _userLocation.value
+                val response = geocodingService.autocomplete(
+                    text = query,
+                    apiKey = apiKey,
+                    focusLat = focus?.latitude,
+                    focusLon = focus?.longitude
+                )
+                _suggestions.value = response.features
+            } catch (e: Exception) {
+                _suggestions.value = emptyList()
+            }
+        }
     }
 
     fun onSearch(query: String) {
-        // TODO: Implement search logic
+        if (query.isBlank()) return
+        
+        viewModelScope.launch {
+            try {
+                val focus = _userLocation.value
+                val response = geocodingService.search(
+                    text = query,
+                    apiKey = apiKey,
+                    focusLat = focus?.latitude,
+                    focusLon = focus?.longitude
+                )
+                
+                response.features.firstOrNull()?.let { feature ->
+                    selectFeature(feature)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onSuggestionSelected(feature: GeocodingFeature) {
+        _searchQuery.value = feature.properties.label
+        _suggestions.value = emptyList()
+        selectFeature(feature)
+    }
+
+    private fun selectFeature(feature: GeocodingFeature) {
+        val coords = feature.geometry.coordinates
+        val latLng = LatLng(coords[1], coords[0])
+        _selectedLocation.value = latLng
+        viewModelScope.launch {
+            _searchResults.emit(latLng)
+        }
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _suggestions.value = emptyList()
+        _selectedLocation.value = null
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
