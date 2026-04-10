@@ -1,4 +1,4 @@
-package com.domakingo.thelongway.ui.theme
+package com.domakingo.thelongway.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
