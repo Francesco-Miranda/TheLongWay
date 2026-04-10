@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">The Long Way</string>
+    <string name="app_name" translatable="false">The Long Way</string>
     <string name="search_placeholder">Search…</string>
     <string name="clear_search_desc">Clear search</string>
     <string name="center_on_user_location">Center on user location</string>

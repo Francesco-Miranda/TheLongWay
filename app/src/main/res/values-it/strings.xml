@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">The Long Way</string>
     <string name="search_placeholder">Cerca…</string>
     <string name="clear_search_desc">Cancella ricerca</string>
     <string name="center_on_user_location">Centra sulla mia posizione</string>
