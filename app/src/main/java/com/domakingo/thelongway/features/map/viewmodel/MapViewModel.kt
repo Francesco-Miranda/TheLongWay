@@ -31,6 +31,9 @@ class MapViewModel(
     private val _isLocationPermissionGranted = MutableStateFlow(false)
     val isLocationPermissionGranted: StateFlow<Boolean> = _isLocationPermissionGranted.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
     private var isCurrentDark = false
     private var locationJob: Job? = null
@@ -54,6 +57,14 @@ class MapViewModel(
         locationJob = locationProvider.locationFlow()
             .onEach { location -> _userLocation.value = location }
             .launchIn(viewModelScope)
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onSearch(query: String) {
+        // TODO: Implement search logic
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

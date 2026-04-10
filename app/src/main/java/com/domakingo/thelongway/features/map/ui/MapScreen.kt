@@ -3,19 +3,24 @@ package com.domakingo.thelongway.features.map.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.domakingo.thelongway.core.ui.permissions.PermissionGate
+import com.domakingo.thelongway.features.map.ui.components.MapSearchBar
 import com.domakingo.thelongway.features.map.ui.components.UserLocationButton
 import com.domakingo.thelongway.features.map.viewmodel.MapViewModel
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -58,8 +63,10 @@ private fun MapContent(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val focusManager = LocalFocusManager.current
     val styleUrl by viewModel.styleUrl.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     val mapView = remember { MapView(context) }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -72,6 +79,10 @@ private fun MapContent(
                 if (isPermissionGranted) {
                     setupLocationComponent(context, map, style)
                 }
+            }
+            map.addOnMapClickListener {
+                focusManager.clearFocus()
+                false
             }
         }
     }
@@ -109,15 +120,32 @@ private fun MapContent(
         }
     }
 
-    Box(modifier = modifier) {
+    Box(
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ) {
+            focusManager.clearFocus()
+        }
+    ) {
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize()
         )
 
+        MapSearchBar(
+            query = searchQuery,
+            onQueryChange = viewModel::onSearchQueryChange,
+            onSearch = viewModel::onSearch,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+        )
+
         if (isPermissionGranted) {
             UserLocationButton(
                 onClick = {
+                    focusManager.clearFocus()
                     userLocation?.let { location ->
                         mapInstance?.animateCamera(
                             CameraUpdateFactory.newLatLngZoom(
