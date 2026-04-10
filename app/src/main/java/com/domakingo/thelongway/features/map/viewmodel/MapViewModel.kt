@@ -1,27 +1,58 @@
 package com.domakingo.thelongway.features.map.viewmodel
 
-import androidx.lifecycle.ViewModel
-import com.domakingo.thelongway.BuildConfig
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.domakingo.thelongway.BuildConfig
+import com.domakingo.thelongway.core.location.LocationProvider
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
-class MapViewModel(private val sensorManager: SensorManager) : ViewModel(), SensorEventListener {
+class MapViewModel(
+    private val sensorManager: SensorManager,
+    private val locationProvider: LocationProvider
+) : ViewModel(), SensorEventListener {
     private val apiKey = BuildConfig.STADIA_MAPS_API_KEY
     private val _styleUrl = MutableStateFlow(getStyleUrl(isDark = false))
     val styleUrl: StateFlow<String> = _styleUrl.asStateFlow()
 
+    private val _userLocation = MutableStateFlow<Location?>(null)
+    val userLocation: StateFlow<Location?> = _userLocation.asStateFlow()
+
+    private val _isLocationPermissionGranted = MutableStateFlow(false)
+    val isLocationPermissionGranted: StateFlow<Boolean> = _isLocationPermissionGranted.asStateFlow()
+
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
     private var isCurrentDark = false
+    private var locationJob: Job? = null
 
     init {
         lightSensor?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
         }
+    }
+
+    fun onLocationPermissionResult(granted: Boolean) {
+        _isLocationPermissionGranted.value = granted
+        if (granted) {
+            startLocationUpdates()
+        }
+    }
+
+    private fun startLocationUpdates() {
+        if (locationJob != null) return
+        
+        locationJob = locationProvider.locationFlow()
+            .onEach { location -> _userLocation.value = location }
+            .launchIn(viewModelScope)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -44,6 +75,7 @@ class MapViewModel(private val sensorManager: SensorManager) : ViewModel(), Sens
     override fun onCleared() {
         super.onCleared()
         sensorManager.unregisterListener(this)
+        locationJob?.cancel()
     }
 
     companion object {
