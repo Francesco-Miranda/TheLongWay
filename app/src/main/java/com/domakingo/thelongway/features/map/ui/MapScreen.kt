@@ -29,14 +29,15 @@ fun MapScreen(
 
     val mapView = remember {
         MapView(context).apply {
-            getMapAsync { it.setStyle(styleUrl) }
+            getMapAsync { map ->
+                map.setStyle(styleUrl)
+            }
         }
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_CREATE -> mapView.onCreate(null)
                 Lifecycle.Event.ON_START -> mapView.onStart()
                 Lifecycle.Event.ON_RESUME -> mapView.onResume()
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
